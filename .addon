@@ -1,0 +1,13 @@
+{
+  "Title": "Codename RPG",
+  "Type": "game",
+  "Org": "rifter",
+  "Ident": "codename_rpg",
+  "Schema": 1,
+  "HasAssets": true,
+  "AssetsPath": "",
+  "ResourcePaths": null,
+  "HasCode": true,
+  "CodePath": "/code/",
+  "RootNamespace": "Sandbox"
+}

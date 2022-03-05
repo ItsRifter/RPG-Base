@@ -13,7 +13,6 @@ public class NPCSpawnpoint : Entity
 	public int NPCRespawnRate { get; set; }
 
 	private BaseNPC NPC;
-	private TimeSince timeKilled;
 
 	public override void Spawn()
 	{

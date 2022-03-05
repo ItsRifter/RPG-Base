@@ -5,7 +5,8 @@ using System.Linq;
 public partial class PlayerBase : Player
 {
 
-	private bool canMove;
+
+	private bool canMove = true;
 
 	public PlayerBase()
 	{
@@ -45,13 +46,13 @@ public partial class PlayerBase : Player
 		canMove = true;
 
 		SpawnAtPoint();
-
 		Health = 100;
 
 		if(Inventory != null)
 		{
-			Inventory.Add(new TestMelee(), true);
+			Inventory.Add(new MeleeBase(), true);
 		}
+
 	}
 
 	public override void Respawn()
@@ -67,6 +68,12 @@ public partial class PlayerBase : Player
 		EnableAllCollisions = true;
 
 		canMove = true;
+
+		if ( Inventory != null )
+		{
+			Inventory.DeleteContents();
+			Inventory.Add( new Crowbar(), true );
+		}
 	}
 
 	public override void Simulate( Client cl )

@@ -13,5 +13,6 @@ public partial class RPGHud : Sandbox.HudEntity<RootPanel>
 		//RPG Huds
 		RootPanel.AddChild<PlayerStats>();
 		RootPanel.AddChild<InventoryMenu>();
+		RootPanel.AddChild<ShopMenu>();
 	}
 }

@@ -12,4 +12,18 @@ public partial class GeneralShop : BaseNPC
 	{
 		base.Spawn();
 	}
+
+	public override void OnNPCUse( PlayerBase player )
+	{
+		base.OnNPCUse( player );
+
+		using ( Prediction.Off() )
+			OpenMenu();
+	}
+
+	[ClientRpc]
+	public override void OpenMenu()
+	{
+		
+	}
 }

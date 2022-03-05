@@ -5,13 +5,40 @@ using Sandbox;
 
 public partial class BaseNPC : AnimEntity
 {
+	//Basics
 	public virtual string NPCName => "Default NPC";
-	public virtual int BaseHealth => 1;
-	public virtual float BaseSpeed => 10;
 	public virtual string BaseModel => "models/citizen/citizen.vmdl";
+	public virtual int BaseHealth => 1;
+	public virtual float BaseSpeed => 1;
+
+	//Attacking
+	public virtual float AlertRadius => 1;
+	public virtual float AttackCooldown => 1;
+	public virtual float AttackDMG => 1;
+	public virtual string AlertSound => "";
+
+	private PlayerBase targetPlayer;
+
+	private TimeSince timeFoundPlayer;
+
+	private bool isInPursuit;
+
+	//Friendly or Hostile
 	public virtual bool IsFriendly => false;
 	public virtual int minRndLevel => 1;
 	public virtual int maxRndLevel => 2;
+
+	//Shops
+	public enum ShopType
+	{
+		General, //General items (fruits, ammo, general armor/weapons)
+		Weapons, //Weapons (Melee, Ranged, Off-hand items)
+		Armor, //Armor (Helmet, Shoulders, Chestplate, Boots)
+		Misc //Miscellenous (Books, Spells)
+	}
+
+	public virtual ShopType Shoptype => ShopType.General;
+
 
 	public List<(ItemBase itemType, int amount, int chance)> ItemToSpawn { get; set; }
 
@@ -21,18 +48,18 @@ public partial class BaseNPC : AnimEntity
 
 	private int xpReward = 0;
 
-	public enum ShopType
-	{
-		General,
-		Weapons,
-		Armor,
-		Misc
-	}
 
-	public virtual ShopType Shoptype => ShopType.General;
+	public NPCDebugDraw Draw => NPCDebugDraw.Once;
+
+	Vector3 InputVelocity;
+
+	Vector3 LookDir;
 
 	[ConVar.Replicated]
-	public static bool nav_drawpath { get; set; }
+	public static bool rpg_nav_drawpath { get; set; }
+
+	[ConVar.Replicated]
+	public static bool rpg_npc_range { get; set; }
 
 	[ServerCmd( "rpg_npc_clear" )]
 	public static void ClearAllNPCs()
@@ -43,18 +70,20 @@ public partial class BaseNPC : AnimEntity
 
 	NPCNavigation Path = new NPCNavigation();
 	public NPCSteering Steer;
-	public NPCSteerWander Wander;
-
 	public override void Spawn()
 	{
+		//Items to spawn upon death
 		ItemToSpawn = new List<(ItemBase itemType, int amount, int chance)>();
 
 		Tags.Add( "player", "pawn" );
 
 		SetModel( BaseModel );
 
+		//Set the NPC level between min and max level range
 		NPCLevel = Rand.Int( minRndLevel, maxRndLevel );
-		xpReward = Rand.Int (minXP, maxXP );
+
+		//Set the XP reward between the min and max xp range
+		xpReward = Rand.Int( minXP, maxXP );
 
 		Health = BaseHealth * NPCLevel;
 
@@ -63,15 +92,17 @@ public partial class BaseNPC : AnimEntity
 		SetupPhysicsFromCapsule( PhysicsMotionType.Keyframed, Capsule.FromHeightAndRadius( 72, 8 ) );
 
 		EnableHitboxes = true;
+		isInPursuit = false;
 
 		SetBodyGroup( 1, 0 );
+
+		Steer = new NPCSteerWander();
 	}
 
-	public NPCDebugDraw Draw => NPCDebugDraw.Once;
-
-	Vector3 InputVelocity;
-
-	Vector3 LookDir;
+	[ClientRpc]
+	public virtual void OpenMenu()
+	{
+	}
 
 	[Event.Tick.Server]
 	public void Tick()
@@ -88,7 +119,7 @@ public partial class BaseNPC : AnimEntity
 				Velocity = Velocity.AddClamped( InputVelocity * Time.Delta * 500, BaseSpeed );
 			}
 
-			if ( nav_drawpath )
+			if ( rpg_nav_drawpath )
 			{
 				Steer.DebugDrawPath();
 			}
@@ -110,6 +141,44 @@ public partial class BaseNPC : AnimEntity
 		animHelper.WithLookAt( EyePosition + LookDir );
 		animHelper.WithVelocity( Velocity );
 		animHelper.WithWishVelocity( InputVelocity );
+
+		if ( !IsFriendly )
+		{
+			var ents = FindInSphere( Position, AlertRadius );
+
+			foreach ( var entity in ents )
+			{
+				if ( entity is PlayerBase player )
+				{
+					OnAlert();
+					Steer = new NPCSteering();
+					targetPlayer = player;
+				}
+			}
+
+			if ( timeFoundPlayer >= 4.5f && isInPursuit )
+			{
+				targetPlayer = null;
+				isInPursuit = false;
+				Steer = new NPCSteerWander();
+			}
+
+			if ( targetPlayer.IsValid() )
+				Steer.Target = targetPlayer.Position;
+
+			if( rpg_npc_range )
+				DebugOverlay.Sphere( Position, AlertRadius, Color.Red, true );
+		}
+	}
+
+	public virtual void OnAlert()
+	{
+		if ( isInPursuit )
+			return;
+
+		isInPursuit = true;
+		PlaySound( AlertSound );
+		timeFoundPlayer = 0;
 	}
 
 	protected virtual void Move( float timeDelta )
@@ -193,6 +262,7 @@ public partial class BaseNPC : AnimEntity
 
 		if ( Health <= 0 && info.Attacker is PlayerBase player )
 		{
+			//Give player XP based on reward
 			player.AddXP( xpReward );
 			OnKilled();
 		}
@@ -201,19 +271,16 @@ public partial class BaseNPC : AnimEntity
 
 	public override void OnKilled()
 	{
-
 		foreach ( var item in ItemToSpawn )
 		{
+			//Random int chance
 			int randomChance = Rand.Int( 1, 100 );
 
+			//Spawn the item if the chance is greater or equal than
 			if ( item.chance >= randomChance )
 			{
-
-				Log.Info( item.itemType.GetType() );
-
-				var newItem = new Money();
+				var newItem = Library.Create<ItemBase>( item.itemType.GetType().FullName );
 				newItem.ItemAmount = item.amount;
-				newItem.Spawn();
 				newItem.Position = Position;
 			} 
 		}
@@ -221,6 +288,7 @@ public partial class BaseNPC : AnimEntity
 		base.OnKilled();
 	}
 
+	//NPC Interaction
 	public virtual void OnNPCUse(PlayerBase player)
 	{
 		Log.Info( player.Client.Name + " Interacted " + NPCName );

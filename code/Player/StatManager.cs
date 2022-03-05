@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Sandbox;
 
-partial class PlayerBase
+public partial class PlayerBase
 {
 	[Net] public int CurrentXP { get; private set; }
 	[Net] public int ReqXP { get; private set; }
@@ -16,6 +16,26 @@ partial class PlayerBase
 		ReqXP = 50;
 		Level = 0;
 		Money = 0;
+	}
+
+	public int[] GetStats()
+	{
+		int[] stats = new int[4];
+
+		stats[0] = CurrentXP;
+		stats[1] = ReqXP;
+		stats[2] = Level;
+		stats[3] = Money;
+
+		return stats;
+	}
+
+	public void SetStats(int curXP, int reqXP, int curLvl, int curMoney)
+	{
+		CurrentXP = curXP;
+		ReqXP = reqXP;
+		Level = curLvl;
+		Money = curMoney;
 	}
 
 	public void AddXP(int XP)
@@ -57,6 +77,28 @@ partial class PlayerBase
 		Log.Info( Client.Name + " spent (or lost) " + takeMoney + " gold" );
 
 		Money -= takeMoney;
+	}
+
+	[ServerCmd( "rpg_save" )]
+	public static void SaveCMD()
+	{
+		var player = ConsoleSystem.Caller.Pawn as PlayerBase;
+
+		if ( player == null )
+			return;
+
+		Event.Run( "rpg_evnt_save", player );
+	}
+
+	[ServerCmd( "rpg_load" )]
+	public static void LoadCMD()
+	{
+		var player = ConsoleSystem.Caller.Pawn as PlayerBase;
+
+		if ( player == null )
+			return;
+
+		Event.Run( "rpg_evnt_load", player );
 	}
 }
 

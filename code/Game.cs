@@ -7,13 +7,17 @@ using System.Linq;
 using System.Threading.Tasks;
 
 
-public partial class MyGame : Sandbox.Game
+public partial class Game : Sandbox.Game
 {
 	private RPGHud oldHud;
 
-	public MyGame()
+	public Game()
 	{
-		if(IsClient)
+		if(IsServer)
+		{
+
+		}
+		if (IsClient)
 		{
 			oldHud = new RPGHud();
 		}
@@ -36,10 +40,15 @@ public partial class MyGame : Sandbox.Game
 		player.Spawn();
 
 		client.Pawn = player;
+
+		LoadSave( player );
 	}
 
 	public override void ClientDisconnect( Client cl, NetworkDisconnectionReason reason )
 	{
+		if ( cl.Pawn is PlayerBase player )
+			CommitSave( player );
+
 		base.ClientDisconnect( cl, reason );
 	}
 }

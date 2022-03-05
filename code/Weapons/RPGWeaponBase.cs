@@ -44,7 +44,8 @@ partial class RPGWeaponBase : BaseWeapon
 	{
 		base.Spawn();
 
-		AmmoClip = ClipSize;
+		if( !IsMelee )
+			AmmoClip = ClipSize;
 
 		SetModel( WorldModel );
 	}

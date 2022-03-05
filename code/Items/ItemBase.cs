@@ -12,33 +12,29 @@ public partial class ItemBase : AnimEntity
 
 	public override void Spawn()
 	{
-		base.Spawn();
 		SetModel( ItemModel );
 
-		CollisionGroup = CollisionGroup.Player;
-		SetInteractsAs( CollisionLayer.Debris );
-
-		EnableHitboxes = true;
-		PhysicsEnabled = true;
-
+		//If the model, throw an log error with the name
 		if (Model == null )
 		{
 			Log.Error( Name + " has an invalid model or doesn't exist" );
 			return;
 		}
 
-		if ( ItemAmount <= -1 )
-			Delete();
-
+		EnableHitboxes = true;
 		PhysicsEnabled = true;
 		UsePhysicsCollision = true;
+
+		CollisionGroup = CollisionGroup.Player;
+		SetInteractsAs( CollisionLayer.Debris );
 
 		SetupPhysicsFromModel( PhysicsMotionType.Dynamic );
 	}
 
 	public virtual void OnUse(PlayerBase picker)
 	{
-		Delete();
+		if(IsServer)
+			Delete();
 	}
 }
 

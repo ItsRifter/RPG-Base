@@ -2,7 +2,7 @@
   "Title": "RPG Base",
   "Type": "game",
   "Org": "rifter",
-  "Ident": "codename_rpg",
+  "Ident": "rpg_base",
   "Schema": 1,
   "HasAssets": true,
   "AssetsPath": "",
